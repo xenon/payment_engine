@@ -62,7 +62,6 @@ fn main() {
 
     // attempt to read the file
     match read_file(&args[1]) {
-        // ignore the extra errors
         Ok(engine) => {
             let mut wtr = csv::WriterBuilder::new().from_writer(std::io::stdout());
             // write the output
