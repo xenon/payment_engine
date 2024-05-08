@@ -5,7 +5,7 @@ Takes a CSV file of transactions and produces a CSV of accounts and their balanc
 cargo run -- input.csv
 ```
 - The output account CSV data is written to `stdout`, redirect it with `>` to a file
-- Transaction errors are written to `stderr`
+- Transaction errors are written to `stderr` if the feature flag ``printerrors`` was set at compilation (off by default)
 ## Transaction CSV Format [Input]
 - `type`: action to perform *[deposit, withdrawal, dispute, resolve, chargeback]*
 - `client`: client id *[16bit unsigned int]*
@@ -41,6 +41,12 @@ Payment Engine errors are raised when processing invalid transactions. Invalid t
 - **Non-existing Dispute:** can't dispute a transaction that is not there
 - **Client Mismatch:** client may only dispute their own transactions
 - **Invalid Dispute/Resolve/Chargeback:** criteria not met for the action
+### Setting the error flag
+Pass in ``--features printerrors`` in the ``cargo`` command to see the full error output.
+```sh
+cargo run --features printerrors -- input.csv
+```
+This flag defaults to being off because on files with a lot of errors the printing bottlenecks the program.
 ## Testing
 Each module in the crate has its own unit test suite.
 ### Running the tests

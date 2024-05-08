@@ -95,7 +95,7 @@ impl PaymentEngine {
             if transactions.contains_key(&transaction.tx) {
                 return Err(TransactionError::DuplicateTransaction(transaction.tx));
             }
-            // check for negative amounts
+            // check for non-positive amounts
             if amount <= 0_f64 {
                 return Err(TransactionError::NonPositiveAmount(
                     transaction.client,
@@ -175,16 +175,11 @@ impl PaymentEngine {
             }
             Ok(())
         }
-        // create the customer account if we've never seen it before
-        if !self.accounts.contains_key(&transaction.client) {
-            self.accounts
-                .insert(transaction.client, Account::new(transaction.client));
-        }
-        // get the customer account
+        // get customer account or create it if we've never seen it before
         let account = self
             .accounts
-            .get_mut(&transaction.client)
-            .expect("Account should have been added immediately before!");
+            .entry(transaction.client)
+            .or_insert_with(|| Account::new(transaction.client));
 
         // attempt the transaction if the account is not locked
         if !account.locked() {
@@ -196,11 +191,10 @@ impl PaymentEngine {
             // perform the transaction on the account
             // transactions are grouped into making a new entry OR referring/modifying an old one
             if transaction.transaction_type.is_new_transaction() {
-                new_transaction(&mut self.transactions, account, transaction)?;
+                new_transaction(&mut self.transactions, account, transaction)
             } else {
-                referring_transaction(&mut self.transactions, account, transaction)?;
+                referring_transaction(&mut self.transactions, account, transaction)
             }
-            Ok(())
         } else {
             Err(TransactionError::AccountLocked(transaction.client))
         }

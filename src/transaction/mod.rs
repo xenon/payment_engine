@@ -48,7 +48,7 @@ impl Transaction {
     }
 
     /// Ensure that only expected transaction types have amounts.
-    /// Since serde can't guarantee that this field is correct, we enforce it manually.
+    /// Since serde can't guarantee the amount field is set according to type we enforce it manually.
     fn validate(&self) -> bool {
         self.amount.is_some() == self.transaction_type.should_have_amount()
     }
@@ -64,11 +64,10 @@ impl Transaction {
             .flexible(true) // avoid the extra comma after dispute, resolve and chargeback
             .from_path(file)?
             .into_deserialize::<Transaction>()
-            .filter(|transaction| {
-                if let Ok(t) = transaction {
-                    return t.validate();
-                }
-                false
+            .filter(|res_transaction| {
+                res_transaction
+                    .as_ref()
+                    .map_or_else(|_| false, |t| t.validate())
             }))
     }
 
@@ -82,16 +81,15 @@ impl Transaction {
             .flexible(true) // avoid the extra comma after dispute, resolve and chargeback
             .from_reader(bytes)
             .into_deserialize::<Transaction>()
-            .filter(|transaction| {
-                if let Ok(t) = transaction {
-                    return t.validate();
-                }
-                false
+            .filter(|res_transaction| {
+                res_transaction
+                    .as_ref()
+                    .map_or_else(|_| false, |t| t.validate())
             })
     }
 
     // Disputes work like a state machine:
-    // First it transitions to the 'Disputed' status
+    // First the Transaction transitions to the 'Disputed' status
     // From there either 'Resolved' or 'Chargeback' status
 
     /// Only transactions stored in the transaction engine should have a dispute status
@@ -109,7 +107,7 @@ impl Transaction {
 
     /// Start a dispute on the transaction if possible
     pub fn dispute(&mut self) -> bool {
-        let can_dispute = self.dispute_possible() && self.dispute_status == None;
+        let can_dispute = self.dispute_possible() && self.dispute_status.is_none();
         if can_dispute {
             self.dispute_status = Some(DisputeStatus::Disputed);
         }
